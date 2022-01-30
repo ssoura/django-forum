@@ -16,29 +16,36 @@
         <title>Forum</title>
     </head>
     <body>
-        
+        <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class=""navbar-brand" href ="{% url 'forum-index' %}"><i class="fas fa-comments fa-2x home-btn"></i></a>
+                <ul class="navbar-nav justify-content-end ms-md-auto">
+                {% if user.is_authenticated %}                   
+                <li class="nav-item align-self-center">
+                    <a href="{% url 'logout' %}"><h3>log out</h3></a>
+                </li>
+                <li class="nav-item align-self-center">
+                    <a href="{% url 'profile' username=user.username %}"><img class="rounded-circle account-img thumbpic" src="{{ user.profile.image.url }}" height="40"></a>
+                </li>
 
-        <div class="row vertical-align header">
-                <div class="col-3 offset-1">
-                    <a href ="{% url 'forum-index' %}"><i class="fas fa-comments fa-3x home-btn"></i></a>
-                </div>
-                {% if user.is_authenticated %}
-                    <div class="col-1 offset-5 text-right align-self-center">
-                        <a href="{% url 'logout' %}"><h3>log out</h3></a>
-                    </div>
-                    <div class="col-1 text-right align-self-center">
-                            <a href="{% url 'profile' username=user.username %}"><img class="rounded-circle account-img thumbpic" src="{{ user.profile.image.url }}" height="50"></a>
-                            
-                        </div>
                 {% else %}
-                    <div class="col-1 offset-5 text-right align-self-center">
+
+                <li class="nav-item align-self-center">
+                    <button type="button" class="btn btn-dark">
                         <a href="{% url 'login' %}"><h3>log in</h3></a>
-                    </div>
-                    <div class="col-1 text-right align-self-center">
+                    </button>
+                </li>
+                <li class="nav-item align-self-center">
+                    <button type="button" class="btn btn-dark">
                         <a href="{% url 'registration' %}"><h3>register</h3></a>
-                    </div>
+                    </button>
+                </li>
                 {% endif %}
+                </ul>
+                
             </div>
+        </nav>
+
         <div class="container-fluid">
             {% block content %}{% endblock %}
         </div>
@@ -51,30 +58,6 @@
     </body>
 
     <footer>
-        <script src="{% static 'js/theme.js' %}"></script>
-
-        <script>
-            function loadThemeCSS(theme){
-                var fileref = document.createElement("link");
-                fileref.rel = "stylesheet";
-                fileref.type = "text/css";
-
-                if(theme == "dark"){
-                    fileref.href = "{% static 'css/dark-theme.css' %}";
-                }else{
-                    fileref.href = "{% static 'css/light-theme.css' %}";
-                }
-
-                document.getElementsByTagName("head")[0].appendChild(fileref);
-            }
-        </script>
-        
-        <div id="theme-wrapper">
-            <p>Dark Mode</p>
-            <input class="switch" type="checkbox" id="darkSwitch" />
-            <label class="switch" for="switch" onclick="onThemeChange();">Toggle</label>
-        </div>
-
     </footer>
 
 </html>
