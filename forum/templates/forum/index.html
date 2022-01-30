@@ -1,0 +1,28 @@
+{% extends "forum/base.html" %}
+{% block content %}
+
+    <div class="col-2 offset-5 mt-5">
+            <h1 style="width: 6ch;">topics</h1>
+    </div>
+
+    {% if user.is_superuser %}
+        <div id="topic-add">
+            <a href="{% url 'topic-add' %}">
+                <h3><i class="fas fa-plus"></i></h3>
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="topics">
+        {% for topic in topics %}
+            <div class="row">
+                <div class="col-2 offset-5 text-center">
+                    <a href="{% url 'topic-detail' topic.id %}"><h3 class="row topic_title">{{ topic.title }}</h3></a>
+                    <p class="row">{{ topic.description }}</p>
+                    <hr>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+{% endblock content %} 
