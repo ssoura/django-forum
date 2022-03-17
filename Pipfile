@@ -4,9 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pillow = "*"
-django = "*"
-django-crispy-forms = "*"
+asgiref = "==3.4.1"
+autopep8 = "==1.5.7"
+django-cors-headers = "==3.8.0"
+djangorestframework = "==3.12.4"
+pycodestyle = "==2.7.0"
+pytz = "==2021.1"
+sqlparse = "==0.4.2"
+toml = "==0.10.2"
+Django = "==4.0.2"
+Pillow = "==9.0.1"
 
 [dev-packages]
 

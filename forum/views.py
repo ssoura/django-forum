@@ -1,105 +1,197 @@
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
-from django.shortcuts import render, reverse
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.views.generic.edit import FormMixin
-from django.views.generic import (
-    ListView,
-    DetailView,
-    CreateView,
-    UpdateView,
-    DeleteView
-)
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.contrib.auth import authenticate, login, logout
+from .models import Post, Topic, Message, User
+from .forms import PostForm, UserForm, MyUserCreationForm
 
-from .models import Topic, Post, Comment
-from .forms import CreateCommentForm
+# Create your views here.
 
-# Topic views
+def loginPage(request):
+    page = 'login'
+    if request.user.is_authenticated:
+        return redirect('home')
 
-class TopicListView(ListView):
-    model = Topic
-    template_name = 'forum/index.html'  # <app>/<model>_<viewtype>.html
-    context_object_name = 'topics'
+    if request.method == 'POST':
+        email = request.POST.get('email').lower()
+        password = request.POST.get('password')
 
-class TopicDetailView(DetailView):
-    model = Topic
+        try:
+            user = User.objects.get(email=email)
+        except:
+            messages.error(request, 'User does not exist')
 
-    def get_context_data(self, **kwargs):
-        context = super(TopicDetailView, self).get_context_data(**kwargs)
-        context['posts'] = Post.objects.filter(topic=self.kwargs.get('pk'))
-        return context
+        user = authenticate(request, email=email, password=password)
 
-class TopicCreateView(LoginRequiredMixin, CreateView):
-    model = Topic
-    fields = ['title', 'description']
-
-    def form_valid(self, form):
-        return super().form_valid(form)
-
-# Post views
-
-class PostDetailView(LoginRequiredMixin, FormMixin, DetailView):
-    model = Post
-    form_class = CreateCommentForm
-
-    def get_context_data(self, **kwargs):
-        context = super(PostDetailView, self).get_context_data(**kwargs)
-        context['comments'] = Comment.objects.filter(post=self.kwargs.get('pk'))
-        context['form'] = CreateCommentForm(initial={'post': self.object, 'author': self.request.user})
-
-        return context
-
-    def get_success_url(self):
-        return reverse('post-detail', kwargs={'pk': self.object.id})
-
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        form = self.get_form()
-        if form.is_valid():
-            return self.form_valid(form)
+        if user is not None:
+            login(request, user)
+            return redirect('home')
         else:
-            return self.form_invalid(form)
+            messages.error(request, 'Username OR password does not exit')
 
-    def form_valid(self, form):
-        form.save()
-        return super(PostDetailView, self).form_valid(form)
+    context = {'page': page}
+    return render(request, 'forum/login_register.html', context)
 
-class PostCreateView(LoginRequiredMixin, CreateView):
-    model = Post
-    fields = ['title', 'body']
 
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        form.instance.topic = Topic.objects.get(pk=self.kwargs['pk'])
-        return super().form_valid(form)
+def logoutUser(request):
+    logout(request)
+    return redirect('home')
 
-class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    model = Post
-    fields = ['title', 'body']
 
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
+def registerPage(request):
+    form = MyUserCreationForm()
 
-    def test_func(self):
-        post = self.get_object()
-        if self.request.user == post.author:
-            return True
-        return False
+    if request.method == 'POST':
+        form = MyUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.username = user.username.lower()
+            user.save()
+            login(request, user)
+            return redirect('home')
+        else:
+            messages.error(request, 'An error occurred during registration')
 
-class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    model = Post
-    success_url = '/'
+    return render(request, 'forum/login_register.html', {'form': form})
 
-    def test_func(self):
-        post = self.get_object()
-        if self.request.user == post.author:
-            return True
-        return False    
 
-# Static pages
+def home(request):
+    q = request.GET.get('q') if request.GET.get('q') != None else ''
 
-def login(request):
-    return render(request, 'forum/login.html')
+    posts = Post.objects.filter(
+        Q(topic__name__icontains=q) |
+        Q(name__icontains=q) |
+        Q(description__icontains=q)
+    )
 
-def logout(request):
-    return render(request, 'forum/logout.html')
+    topics = Topic.objects.all()[0:5]
+    post_count = posts.count()
+    post_messages = Message.objects.filter(
+        Q(post__topic__name__icontains=q))[0:3]
+
+    context = {'posts': posts, 'topics': topics,
+               'post_count': post_count, 'post_messages': post_messages}
+    return render(request, 'forum/home.html', context)
+
+
+def post(request, pk):
+    post = Post.objects.get(id=pk)
+    post_messages = post.message_set.all()
+    participants = post.participants.all()
+
+    if request.method == 'POST':
+        message = Message.objects.create(
+            user=request.user,
+            post=post,
+            body=request.POST.get('body')
+        )
+        post.participants.add(request.user)
+        return redirect('post', pk=post.id)
+
+    context = {'post': post, 'post_messages': post_messages,
+               'participants': participants}
+    return render(request, 'forum/post.html', context)
+
+
+def userProfile(request, pk):
+    user = User.objects.get(id=pk)
+    posts = user.post_set.all()
+    post_messages = user.message_set.all()
+    topics = Topic.objects.all()
+    context = {'user': user, 'posts': posts,
+               'post_messages': post_messages, 'topics': topics}
+    return render(request, 'forum/profile.html', context)
+
+
+@login_required(login_url='login')
+def createPost(request):
+    form = PostForm()
+    topics = Topic.objects.all()
+    if request.method == 'POST':
+        topic_name = request.POST.get('topic')
+        topic, created = Topic.objects.get_or_create(name=topic_name)
+
+        Post.objects.create(
+            host=request.user,
+            topic=topic,
+            name=request.POST.get('name'),
+            description=request.POST.get('description'),
+        )
+        return redirect('home')
+
+    context = {'form': form, 'topics': topics}
+    return render(request, 'forum/post_form.html', context)
+
+
+@login_required(login_url='login')
+def updatePost(request, pk):
+    post = Post.objects.get(id=pk)
+    form = PostForm(instance=post)
+    topics = Topic.objects.all()
+    if request.user != post.host:
+        return HttpResponse('Your are not allowed here!!')
+
+    if request.method == 'POST':
+        topic_name = request.POST.get('topic')
+        topic, created = Topic.objects.get_or_create(name=topic_name)
+        post.name = request.POST.get('name')
+        post.topic = topic
+        post.description = request.POST.get('description')
+        post.save()
+        return redirect('home')
+
+    context = {'form': form, 'topics': topics, 'post': post}
+    return render(request, 'forum/post_form.html', context)
+
+
+@login_required(login_url='login')
+def deletePost(request, pk):
+    post = Post.objects.get(id=pk)
+
+    if request.user != post.host:
+        return HttpResponse('Your are not allowed here!!')
+
+    if request.method == 'POST':
+        post.delete()
+        return redirect('home')
+    return render(request, 'forum/delete.html', {'obj': post})
+
+
+@login_required(login_url='login')
+def deleteMessage(request, pk):
+    message = Message.objects.get(id=pk)
+
+    if request.user != message.user:
+        return HttpResponse('Your are not allowed here!!')
+
+    if request.method == 'POST':
+        message.delete()
+        return redirect('home')
+    return render(request, 'forum/delete.html', {'obj': message})
+
+
+@login_required(login_url='login')
+def updateUser(request):
+    user = request.user
+    form = UserForm(instance=user)
+
+    if request.method == 'POST':
+        form = UserForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect('user-profile', pk=user.id)
+
+    return render(request, 'forum/update-user.html', {'form': form})
+
+
+def topicsPage(request):
+    q = request.GET.get('q') if request.GET.get('q') != None else ''
+    topics = Topic.objects.filter(name__icontains=q)
+    return render(request, 'forum/topics.html', {'topics': topics})
+
+
+def activityPage(request):
+    post_messages = Message.objects.all()
+    return render(request, 'forum/activity.html', {'post_messages': post_messages})

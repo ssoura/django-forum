@@ -1,6 +1,10 @@
 from django.contrib import admin
-from .models import Topic, Post, Comment
 
-admin.site.register(Topic)
+# Register your models here.
+
+from .models import Topic, Post, Message, User
+
+admin.site.register(User)
 admin.site.register(Post)
-admin.site.register(Comment)
+admin.site.register(Topic)
+admin.site.register(Message)

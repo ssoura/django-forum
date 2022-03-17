@@ -1,24 +1,22 @@
-from django.contrib import admin
 from django.urls import path
-
-from .views import (
-    TopicCreateView,
-    TopicListView,
-    TopicDetailView,
-    PostCreateView,
-    PostDetailView,
-    PostUpdateView,
-    PostDeleteView
-)
-
+from . import views
 
 urlpatterns = [
-    path('', TopicListView.as_view(), name='forum-index'),
-    path('topic/add/', TopicCreateView.as_view(), name='topic-add'),
-    path('topic/<int:pk>/', TopicDetailView.as_view(), name='topic-detail'),
+    path('login/', views.loginPage, name="login"),
+    path('logout/', views.logoutUser, name="logout"),
+    path('register/', views.registerPage, name="register"),
 
-    path('topic/<int:pk>/newpost/', PostCreateView.as_view(), name='post-create'),
-    path('post/<int:pk>/', PostDetailView.as_view(), name='post-detail'),
-    path('post/<int:pk>/update/', PostUpdateView.as_view(), name='post-update'),
-    path('post/<int:pk>/delete/', PostDeleteView.as_view(), name='post-delete'),
+    path('', views.home, name="home"),
+    path('post/<str:pk>/', views.post, name="post"),
+    path('profile/<str:pk>/', views.userProfile, name="user-profile"),
+
+    path('create-post/', views.createPost, name="create-post"),
+    path('update-post/<str:pk>/', views.updatePost, name="update-post"),
+    path('delete-post/<str:pk>/', views.deletePost, name="delete-post"),
+    path('delete-message/<str:pk>/', views.deleteMessage, name="delete-message"),
+
+    path('update-user/', views.updateUser, name="update-user"),
+
+    path('topics/', views.topicsPage, name="topics"),
+    path('activity/', views.activityPage, name="activity"),
 ]
